@@ -2,7 +2,8 @@
 # Info:
 
 Efficient C code to list k-cliques such as described in:  
-"Listing k-cliques in Sparse Real-World Graphs. M. Danisch, O. D. Balalau, M. Sozio. WWW2018".
+"Listing k-cliques in Sparse Real-World Graphs. M. Danisch, O. D. Balalau, M. Sozio. WWW2018".  
+https://papers-gamma.link/paper/32
 
 Arboricity.c is an implementation of the algorithm to list all k-cliques described in:  
 "Arboricity and subgraph listing algorithms. Chiba, N., & Nishizeki, T. SIAM Journal on Computing, 14(1), 210-223, 1985".
