@@ -60,6 +60,9 @@ typedef struct {
 	unsigned char *lab;//lab[i] label of node i
 	unsigned **nodes;//sub[l]: nodes in G_l
 	unsigned core;
+	
+	unsigned* new;//forgot what that is...
+	unsigned* old;
 } subgraph;
 
 void free_graph(graph *g){
@@ -330,6 +333,12 @@ subgraph* allocsub(graph *g,unsigned char k){
 	sg->lab=calloc(g->core,sizeof(unsigned char));
 	sg->adj=malloc(g->core*g->core*sizeof(unsigned));
 	sg->core=g->core;
+	
+	sg->new=malloc(g->n*sizeof(unsigned));
+	sg->old=malloc(g->core*sizeof(unsigned));
+	for (i=0;i<g->n;i++){
+		sg->new[i]=-1;
+	}
 	return sg;
 }
 
@@ -337,31 +346,20 @@ void mksub(graph* g,edge ed,subgraph* sg,unsigned char k){
 	unsigned i,j,l,x,y;
 	unsigned u=ed.s,v=ed.t;
 
-	static unsigned *old=NULL,*new=NULL;//to improve
-	#pragma omp threadprivate(new,old)
-
-	if (old==NULL){
-		new=malloc(g->n*sizeof(unsigned));
-		old=malloc(g->core*sizeof(unsigned));
-		for (i=0;i<g->n;i++){
-			new[i]=-1;
-		}
-	}
-
 	for (i=0;i<sg->n[k-1];i++){
 		sg->lab[i]=0;
 	}
 
 	for (i=g->cd[v];i<g->cd[v+1];i++){
-		new[g->adj[i]]=-2;
+		sg->new[g->adj[i]]=-2;
 	}
 
 	j=0;
 	for (i=g->cd[u];i<g->cd[u+1];i++){
 		x=g->adj[i];
-		if (new[x]==-2){
-			new[x]=j;
-			old[j]=x;
+		if (sg->new[x]==-2){
+			sg->new[x]=j;
+			sg->old[j]=x;
 			sg->lab[j]=k-2;
 			sg->nodes[k-2][j]=j;
 			sg->d[k-2][j]=0;//new degrees
@@ -372,10 +370,10 @@ void mksub(graph* g,edge ed,subgraph* sg,unsigned char k){
 	sg->n[k-2]=j;
 
 	for (i=0;i<sg->n[k-2];i++){//reodering adjacency list and computing new degrees
-		x=old[i];
+		x=sg->old[i];
 		for (l=g->cd[x];l<g->cd[x+1];l++){
 			y=g->adj[l];
-			j=new[y];
+			j=sg->new[y];
 			if (j<-2){
 				sg->adj[sg->core*i+sg->d[k-2][i]++]=j;
 			}
@@ -383,7 +381,7 @@ void mksub(graph* g,edge ed,subgraph* sg,unsigned char k){
 	}
 
 	for (i=g->cd[v];i<g->cd[v+1];i++){
-		new[g->adj[i]]=-1;
+		sg->new[g->adj[i]]=-1;
 	}
 }
 
@@ -443,10 +441,10 @@ unsigned long long kclique_main(unsigned char k, graph *g) {
 	unsigned i;
 	unsigned long long n=0;
 	subgraph *sg;
-	#pragma omp parallel private(sg,i) reduction(+:n)
+	#pragma omp parallel private(sg) reduction(+:n)
 	{
 		sg=allocsub(g,k);
-		#pragma omp for schedule(dynamic, 1) nowait
+		#pragma omp for schedule(dynamic,1)// nowait
 		for(i=0; i<g->e; i++){
 			mksub(g,g->edges[i],sg,k);
 			kclique_thread(k-2, sg, &n);
