@@ -287,6 +287,7 @@ void mkspecial(specialsparse *g, unsigned char k){
 		lab[i-1]=k;
 	}
 	printf("max degree = %u\n",max);
+	fflush(stdout);
 
 	g->adj=malloc(g->e*sizeof(unsigned));
 
@@ -375,16 +376,19 @@ int main(int argc,char** argv){
 	t0=t1;
 
 	printf("Reading edgelist from file %s\n",argv[2]);
+	fflush(stdout);
 
 	g=readedgelist(argv[2]);
 	printf("Number of nodes = %u\n",g->n);
 	printf("Number of edges = %u\n",g->e);
+	fflush(stdout);
 
 	t2=time(NULL);
 	printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
 	t1=t2;
 
 	printf("Building the graph structure\n");
+	fflush(stdout);
 
 	ord_core(g);
 	relabel(g);
@@ -399,6 +403,7 @@ int main(int argc,char** argv){
 	t1=t2;
 
 	printf("Iterate over all cliques\n");
+	fflush(stdout);
 
 	n=0;
 	kclique(k, g, &n);
@@ -407,11 +412,13 @@ int main(int argc,char** argv){
 
 	t2=time(NULL);
 	printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
+	fflush(stdout);
 	t1=t2;
 
 	freespecialsparse(g,k);
 
 	printf("- Overall time = %ldh%ldm%lds\n",(t2-t0)/3600,((t2-t0)%3600)/60,((t2-t0)%60));
-
+	fflush(stdout);
+	
 	return 0;
 }
