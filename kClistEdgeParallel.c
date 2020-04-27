@@ -300,6 +300,7 @@ graph* mkgraph(edgelist *el){
 		d[i-1]=0;
 	}
 	printf("core value (max truncated degree) = %u\n",max);
+	fflush(stdout);
 
 	g->adj=malloc(el->e*sizeof(unsigned));
 
@@ -466,7 +467,8 @@ int main(int argc,char** argv){
 	t0=t1;
 
 	printf("Reading edgelist from file %s\n",argv[3]);
-
+	fflush(stdout);
+	
 	el=readedgelist(argv[3]);
 	printf("Number of nodes = %u\n",el->n);
 	printf("Number of edges = %u\n",el->e);
@@ -476,6 +478,8 @@ int main(int argc,char** argv){
 	t1=t2;
 
 	printf("Building the graph structure\n");
+	fflush(stdout);
+	
 	ord_core(el);
 	relabel(el);
 	g=mkgraph(el);
@@ -487,18 +491,21 @@ int main(int argc,char** argv){
 	t1=t2;
 
 	printf("Iterate over all cliques\n");
-
+	fflush(stdout);
+	
 	n=kclique_main(k, g);
 
 	printf("Number of %u-cliques: %llu\n",k,n);
 
 	t2=time(NULL);
 	printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
+	fflush(stdout);
 	t1=t2;
 
 	free_graph(g);
 
 	printf("- Overall time = %ldh%ldm%lds\n",(t2-t0)/3600,((t2-t0)%3600)/60,((t2-t0)%60));
+	fflush(stdout);
 
 	return 0;
 }
