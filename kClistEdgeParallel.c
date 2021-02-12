@@ -63,7 +63,7 @@ typedef struct {
 	Node *n;//n[l]: number of nodes in G_l
 	Node **d;//d[l]: degrees of G_l
 	Node *adj;//truncated list of neighbors
-	unsigned char *lab;//lab[i] label of node i
+	Kvalue *lab;//lab[i] label of node i
 	Node **nodes;//sub[l]: nodes in G_l
 	Node core;
 	

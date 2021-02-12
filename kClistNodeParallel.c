@@ -26,38 +26,48 @@ Will print the number of k-cliques.
 
 #define NLINKS 100000000 //maximum number of edges for memory allocation, will increase if needed
 
+typedef unsigned long int Node;
+typedef unsigned long long int Edge;
+typedef unsigned long long int Clique;
+typedef unsigned char Kvalue;
+
 typedef struct {
-	unsigned s;
-	unsigned t;
+	Node s;
+	Node t;
 } edge;
 
 typedef struct {
-	unsigned node;
-	unsigned deg;
+	Node node;
+	Node deg;
 } nodedeg ;
 
 typedef struct {
-	unsigned n;//number of nodes
-	unsigned e;//number of edges
+	Node n;//number of nodes
+	Edge e;//number of edges
 	edge *edges;//list of edges
-	unsigned *rank;//ranking of the nodes according to degeneracy ordering
+	Node *rank;//ranking of the nodes according to degeneracy ordering
 	//unsigned *map;//oldID newID correspondance NOT USED IN THIS VERSION
 } edgelist;
 
 typedef struct {
-	unsigned n;
-	unsigned *cd;//cumulative degree: (starts with 0) length=n+1
-	unsigned *adj;//truncated list of neighbors
-	unsigned core;//core value of the graph
+	Node n;
+	Edge e;
+	edge *edges;//ading this again here: TO IMPROVE
+	Edge *cd;//cumulative degree: (starts with 0) length=n+1
+	Node *adj;//truncated list of neighbors
+	Node core;//core value of the graph
 } graph;
 
 typedef struct {
-	unsigned *n;//n[l]: number of nodes in G_l
-	unsigned **d;//d[l]: degrees of G_l
-	unsigned *adj;//truncated list of neighbors
-	unsigned char *lab;//lab[i] label of node i
-	unsigned **nodes;//sub[l]: nodes in G_l
-	unsigned core;
+	Node *n;//n[l]: number of nodes in G_l
+	Node **d;//d[l]: degrees of G_l
+	Node *adj;//truncated list of neighbors
+	Kvalue *lab;//lab[i] label of node i
+	Node **nodes;//sub[l]: nodes in G_l
+	Node core;
+	
+	Node* new;//forgot what that is...
+	Node* old;
 } subgraph;
 
 void free_edgelist(edgelist *el){
@@ -72,8 +82,8 @@ void free_graph(graph *g){
 	free(g);
 }
 
-void free_subgraph(subgraph *sg, unsigned char k){
-	unsigned char i;
+void free_subgraph(subgraph *sg, Kvalue k){
+	Kvalue i;
 	free(sg->n);
 	for (i=2;i<k;i++){
 		free(sg->d[i]);
@@ -88,13 +98,13 @@ void free_subgraph(subgraph *sg, unsigned char k){
 
 
 //Compute the maximum of three unsigned integers.
-inline unsigned int max3(unsigned int a,unsigned int b,unsigned int c){
+inline Node max3(Node a,Node b,Node c){
 	a=(a>b) ? a : b;
 	return (a>c) ? a : c;
 }
 
 edgelist* readedgelist(char* input){
-	unsigned e1=NLINKS;
+	Edge e1=NLINKS;
 	edgelist *el=malloc(sizeof(edgelist));
 	FILE *file;
 
@@ -102,7 +112,7 @@ edgelist* readedgelist(char* input){
 	el->e=0;
 	file=fopen(input,"r");
 	el->edges=malloc(e1*sizeof(edge));
-	while (fscanf(file,"%u %u", &(el->edges[el->e].s), &(el->edges[el->e].t))==2) {//Add one edge
+	while (fscanf(file,"%lu %lu", &(el->edges[el->e].s), &(el->edges[el->e].t))==2) {//Add one edge
 		el->n=max3(el->n,el->edges[el->e].s,el->edges[el->e].t);
 		el->e++;
 		if (el->e==e1) {
@@ -119,7 +129,8 @@ edgelist* readedgelist(char* input){
 }
 
 void relabel(edgelist *el){
-	unsigned i, source, target, tmp;
+	Edge i;
+	Node source, target, tmp;
 
 	for (i=0;i<el->e;i++) {
 		source=el->rank[el->edges[i].s];
@@ -138,41 +149,41 @@ void relabel(edgelist *el){
 ///// CORE ordering /////////////////////
 
 typedef struct {
-	unsigned key;
-	unsigned value;
+	Node key;
+	Node value;
 } keyvalue;
 
 typedef struct {
-	unsigned n_max;	// max number of nodes.
-	unsigned n;	// number of nodes.
-	unsigned *pt;	// pointers to nodes.
+	Node n_max;	// max number of nodes.
+	Node n;	// number of nodes.
+	Node *pt;	// pointers to nodes.
 	keyvalue *kv; // nodes.
 } bheap;
 
 
-bheap *construct(unsigned n_max){
-	unsigned i;
+bheap *construct(Node n_max){
+	Node i;
 	bheap *heap=malloc(sizeof(bheap));
 
 	heap->n_max=n_max;
 	heap->n=0;
-	heap->pt=malloc(n_max*sizeof(unsigned));
+	heap->pt=malloc(n_max*sizeof(Node));
 	for (i=0;i<n_max;i++) heap->pt[i]=-1;
 	heap->kv=malloc(n_max*sizeof(keyvalue));
 	return heap;
 }
 
-void swap(bheap *heap,unsigned i, unsigned j) {
+void swap(bheap *heap,Node i, Node j) {
 	keyvalue kv_tmp=heap->kv[i];
-	unsigned pt_tmp=heap->pt[kv_tmp.key];
+	Node pt_tmp=heap->pt[kv_tmp.key];
 	heap->pt[heap->kv[i].key]=heap->pt[heap->kv[j].key];
 	heap->kv[i]=heap->kv[j];
 	heap->pt[heap->kv[j].key]=pt_tmp;
 	heap->kv[j]=kv_tmp;
 }
 
-void bubble_up(bheap *heap,unsigned i) {
-	unsigned j=(i-1)/2;
+void bubble_up(bheap *heap,Node i) {
+	Node j=(i-1)/2;
 	while (i>0) {
 		if (heap->kv[j].value>heap->kv[i].value) {
 			swap(heap,i,j);
@@ -184,7 +195,7 @@ void bubble_up(bheap *heap,unsigned i) {
 }
 
 void bubble_down(bheap *heap) {
-	unsigned i=0,j1=1,j2=2,j;
+	Node i=0,j1=1,j2=2,j;
 	while (j1<heap->n) {
 		j=( (j2<heap->n) && (heap->kv[j2].value<heap->kv[j1].value) ) ? j2 : j1 ;
 		if (heap->kv[j].value < heap->kv[i].value) {
@@ -204,8 +215,8 @@ void insert(bheap *heap,keyvalue kv){
 	bubble_up(heap,heap->n-1);
 }
 
-void update(bheap *heap,unsigned key){
-	unsigned i=heap->pt[key];
+void update(bheap *heap,Node key){
+	Node i=heap->pt[key];
 	if (i!=-1){
 		((heap->kv[i]).value)--;
 		bubble_up(heap,i);
@@ -222,8 +233,8 @@ keyvalue popmin(bheap *heap){
 }
 
 //Building the heap structure with (key,value)=(node,degree) for each node
-bheap* mkheap(unsigned n,unsigned *v){
-	unsigned i;
+bheap* mkheap(Node n,Node *v){
+	Node i;
 	keyvalue kv;
 	bheap* heap=construct(n);
 	for (i=0;i<n;i++){
@@ -242,30 +253,31 @@ void freeheap(bheap *heap){
 
 //computing degeneracy ordering and core value
 void ord_core(edgelist* el){
-	unsigned i,j,r=0,n=el->n,e=el->e;
+	Node i, r=0, n=el->n;
+	Edge j, e=el->e;
 	keyvalue kv;
 	bheap *heap;
 
-	unsigned *d0=calloc(el->n,sizeof(unsigned));
-	unsigned *cd0=malloc((el->n+1)*sizeof(unsigned));
-	unsigned *adj0=malloc(2*el->e*sizeof(unsigned));
-	for (i=0;i<e;i++) {
-		d0[el->edges[i].s]++;
-		d0[el->edges[i].t]++;
+	Node *d0=calloc(el->n,sizeof(Node));
+	Edge *cd0=malloc((el->n+1)*sizeof(Edge));
+	Node *adj0=malloc(2*el->e*sizeof(Node));
+	for (j=0;j<e;j++) {
+		d0[el->edges[j].s]++;
+		d0[el->edges[j].t]++;
 	}
 	cd0[0]=0;
 	for (i=1;i<n+1;i++) {
 		cd0[i]=cd0[i-1]+d0[i-1];
 		d0[i-1]=0;
 	}
-	for (i=0;i<e;i++) {
-		adj0[ cd0[el->edges[i].s] + d0[ el->edges[i].s ]++ ]=el->edges[i].t;
-		adj0[ cd0[el->edges[i].t] + d0[ el->edges[i].t ]++ ]=el->edges[i].s;
+	for (j=0;j<e;j++) {
+		adj0[ cd0[el->edges[j].s] + d0[ el->edges[j].s ]++ ]=el->edges[j].t;
+		adj0[ cd0[el->edges[j].t] + d0[ el->edges[j].t ]++ ]=el->edges[j].s;
 	}
 
 	heap=mkheap(n,d0);
 
-	el->rank=malloc(n*sizeof(unsigned));
+	el->rank=malloc(n*sizeof(Node));
 	for (i=0;i<n;i++){
 		kv=popmin(heap);
 		el->rank[kv.key]=n-(++r);
@@ -282,17 +294,18 @@ void ord_core(edgelist* el){
 //////////////////////////
 //Building the special graph
 graph* mkgraph(edgelist *el){
-	unsigned i,max;
-	unsigned *d;
+	Node i,max;
+	Edge j;
+	Node *d;
 	graph* g=malloc(sizeof(graph));
 
-	d=calloc(el->n,sizeof(unsigned));
+	d=calloc(el->n,sizeof(Node));
 
-	for (i=0;i<el->e;i++) {
-		d[el->edges[i].s]++;
+	for (j=0;j<el->e;j++) {
+		d[el->edges[j].s]++;
 	}
 
-	g->cd=malloc((el->n+1)*sizeof(unsigned));
+	g->cd=malloc((el->n+1)*sizeof(Edge));
 	g->cd[0]=0;
 	max=0;
 	for (i=1;i<el->n+1;i++) {
@@ -300,12 +313,13 @@ graph* mkgraph(edgelist *el){
 		max=(max>d[i-1])?max:d[i-1];
 		d[i-1]=0;
 	}
-	printf("core value (max truncated degree) = %u\n",max);
+	printf("core value (max truncated degree) = %lu\n",max);
+	fflush(stdout);
 
-	g->adj=malloc(el->e*sizeof(unsigned));
+	g->adj=malloc(el->e*sizeof(Node));
 
-	for (i=0;i<el->e;i++) {
-		g->adj[ g->cd[el->edges[i].s] + d[ el->edges[i].s ]++ ]=el->edges[i].t;
+	for (j=0;j<el->e;j++) {
+		g->adj[ g->cd[el->edges[j].s] + d[ el->edges[j].s ]++ ]=el->edges[j].t;
 	}
 
 	free(d);
@@ -315,31 +329,32 @@ graph* mkgraph(edgelist *el){
 }
 
 
-subgraph* allocsub(graph *g,unsigned char k){
-	unsigned i;
+subgraph* allocsub(graph *g,Kvalue k){
+	Kvalue i;
 	subgraph* sg=malloc(sizeof(subgraph));
-	sg->n=calloc(k,sizeof(unsigned));
-	sg->d=malloc(k*sizeof(unsigned*));
-	sg->nodes=malloc(k*sizeof(unsigned*));
+	sg->n=calloc(k,sizeof(Node));
+	sg->d=malloc(k*sizeof(Node*));
+	sg->nodes=malloc(k*sizeof(Node*));
 	for (i=2;i<k;i++){
-		sg->d[i]=malloc(g->core*sizeof(unsigned));
-		sg->nodes[i]=malloc(g->core*sizeof(unsigned));
+		sg->d[i]=malloc(g->core*sizeof(Node));
+		sg->nodes[i]=malloc(g->core*sizeof(Node));
 	}
-	sg->lab=calloc(g->core,sizeof(unsigned char));
-	sg->adj=malloc(g->core*g->core*sizeof(unsigned));
+	sg->lab=calloc(g->core,sizeof(Kvalue));
+	sg->adj=malloc(g->core*g->core*sizeof(Node));
 	sg->core=g->core;
 	return sg;
 }
 
-void mksub(graph* g,unsigned u,subgraph* sg,unsigned char k){
-	unsigned i,j,l,v,w;
+void mksub(graph* g,Node u,subgraph* sg,Kvalue k){
+	Node i,j,v,w;
+	Edge l;
 
-	static unsigned *old=NULL,*new=NULL;//to improve
+	static Node *old=NULL,*new=NULL;//to improve
 	#pragma omp threadprivate(new,old)
 
 	if (old==NULL){
-		new=malloc(g->n*sizeof(unsigned));
-		old=malloc(g->core*sizeof(unsigned));
+		new=malloc(g->n*sizeof(Node));
+		old=malloc(g->core*sizeof(Node));
 		for (i=0;i<g->n;i++){
 			new[i]=-1;
 		}
@@ -350,8 +365,8 @@ void mksub(graph* g,unsigned u,subgraph* sg,unsigned char k){
 	}
 
 	j=0;
-	for (i=g->cd[u];i<g->cd[u+1];i++){
-		v=g->adj[i];
+	for (l=g->cd[u];l<g->cd[u+1];l++){
+		v=g->adj[l];
 		new[v]=j;
 		old[j]=v;
 		sg->lab[j]=k-1;
@@ -373,13 +388,13 @@ void mksub(graph* g,unsigned u,subgraph* sg,unsigned char k){
 		}
 	}
 
-	for (i=g->cd[u];i<g->cd[u+1];i++){
-		new[g->adj[i]]=-1;
+	for (l=g->cd[u];l<g->cd[u+1];l++){
+		new[g->adj[l]]=-1;
 	}
 }
 
-void kclique_thread(unsigned char l, subgraph *sg, unsigned long long *n) {
-	unsigned i,j,k,end,u,v,w;
+void kclique_thread(Kvalue l, subgraph *sg, Clique *n) {
+	Node i,j,k,end,u,v,w;
 
 	if(l==2){
 		for(i=0; i<sg->n[2]; i++){//list all edges
@@ -430,9 +445,9 @@ void kclique_thread(unsigned char l, subgraph *sg, unsigned long long *n) {
 	}
 }
 
-unsigned long long kclique_main(unsigned char k, graph *g) {
-	unsigned u;
-	unsigned long long n=0;
+Clique kclique_main(Kvalue k, graph *g) {
+	Node u;
+	Clique n=0;
 	subgraph *sg;
 	#pragma omp parallel private(sg,u) reduction(+:n)
 	{
@@ -449,8 +464,8 @@ unsigned long long kclique_main(unsigned char k, graph *g) {
 int main(int argc,char** argv){
 	edgelist* el;
 	graph* g;
-	unsigned char k=atoi(argv[2]);
-	unsigned long long n;
+	Kvalue k=atoi(argv[2]);
+	Clique n;
 
 	omp_set_num_threads(atoi(argv[1]));
 
@@ -461,8 +476,8 @@ int main(int argc,char** argv){
 	printf("Reading edgelist from file %s\n",argv[3]);
 
 	el=readedgelist(argv[3]);
-	printf("Number of nodes = %u\n",el->n);
-	printf("Number of edges = %u\n",el->e);
+	printf("Number of nodes = %lu\n",el->n);
+	printf("Number of edges = %llu\n",el->e);
 
 	t2=time(NULL);
 	printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
@@ -473,7 +488,7 @@ int main(int argc,char** argv){
 	relabel(el);
 	g=mkgraph(el);
 
-	printf("Number of nodes (degree > 0) = %u\n",g->n);
+	printf("Number of nodes (degree > 0) = %lu\n",g->n);
 
 	free_edgelist(el);
 
