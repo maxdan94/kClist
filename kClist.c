@@ -334,11 +334,11 @@ void kclique(unsigned l, specialsparse *g, unsigned long long *n) {
 		end=g->cd[u]+g->d[l][u];
 		for (j=g->cd[u];j<end;j++){//relabeling nodes and forming U'.
 			v=g->adj[j];
-			if (g->lab[v]==l){
+			//if (g->lab[v]==l){
 				g->lab[v]=l-1;
 				g->sub[l-1][g->ns[l-1]++]=v;
 				g->d[l-1][v]=0;//new degrees
-			}
+			//}
 		}
 		for (j=0;j<g->ns[l-1];j++){//reodering adjacency list and computing new degrees
 			v=g->sub[l-1][j];
